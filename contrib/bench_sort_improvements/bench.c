@@ -1,0 +1,105 @@
+#include "postgres.h"
+#include "fmgr.h"
+#include "utils/builtins.h"
+#include "nodes/pg_list.h"
+#include <limits.h>
+#include <time.h>
+
+
+PG_MODULE_MAGIC;
+
+Datum bench_int_sort(PG_FUNCTION_ARGS);
+Datum bench_oid_sort(PG_FUNCTION_ARGS);
+
+PG_FUNCTION_INFO_V1(bench_oid_sort);
+PG_FUNCTION_INFO_V1(bench_int_sort);
+
+Datum
+bench_oid_sort(PG_FUNCTION_ARGS)
+{
+    int32 list_size = PG_GETARG_INT32(0);
+    List *list_first = NIL;
+    List *list_second = NIL;
+    Oid random_oid;
+    struct timespec start, end;
+    long time_spent_first;
+    long time_spent_second;
+    double percentage_difference = 0.0;
+    char *result_message;
+
+    for (int i = 0; i < list_size; i++)
+    {
+        random_oid = (Oid) (random() % (UINT_MAX - 1) + 1); 
+        list_first = lappend_oid(list_first, random_oid);
+        list_second = lappend_oid(list_second, random_oid);
+    }
+
+    // Timing the first sort function
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    list_sort(list_first, list_oid_cmp);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_spent_first = (end.tv_sec - start.tv_sec) * 1000000000L + (end.tv_nsec - start.tv_nsec);
+
+    // Timing the second sort function
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    list_oid_sort(list_second);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_spent_second = (end.tv_sec - start.tv_sec) * 1000000000L + (end.tv_nsec - start.tv_nsec);
+
+    percentage_difference = ((double)(time_spent_first - time_spent_second) / time_spent_first) * 100.0;
+
+    list_free(list_first);
+    list_free(list_second);
+    
+    result_message = psprintf("Time taken by list_sort: %ld ns, Time taken by list_oid_sort: %ld ns, Percentage difference: %.2f%%", 
+                              time_spent_first, time_spent_second, percentage_difference);
+    PG_RETURN_TEXT_P(cstring_to_text(result_message));
+}
+
+Datum
+bench_int_sort(PG_FUNCTION_ARGS)
+{
+    int32 list_size = PG_GETARG_INT32(0);
+    List *list_first = NIL;
+    List *list_second = NIL;
+    int random_int;
+    struct timespec start, end;
+    long time_spent_first;
+    long time_spent_second;
+    double percentage_difference = 0.0;
+    char *result_message;
+
+    for (int i = 0; i < list_size; i++)
+    {
+        random_int = rand(); 
+        list_first = lappend_int(list_first, random_int); 
+        list_second = lappend_int(list_second, random_int); 
+    }
+
+    // Timing the first sort function
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    list_sort(list_first, list_oid_cmp);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_spent_first = (end.tv_sec - start.tv_sec) * 1000000000L + (end.tv_nsec - start.tv_nsec);
+
+    // Timing the second sort function
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    list_int_sort(list_second);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    time_spent_second = (end.tv_sec - start.tv_sec) * 1000000000L + (end.tv_nsec - start.tv_nsec);
+
+    percentage_difference = ((double)(time_spent_first - time_spent_second) / time_spent_first) * 100.0;
+
+    list_free(list_first);
+    list_free(list_second);
+    
+    result_message = psprintf("Time taken by list_sort: %ld ns, Time taken by list_int_sort: %ld ns, Percentage difference: %.2f%%", 
+                              time_spent_first, time_spent_second, percentage_difference);
+    PG_RETURN_TEXT_P(cstring_to_text(result_message));
+}
+
+void
+_PG_init()
+{
+    srand(time(NULL));
+}
