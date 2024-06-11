@@ -476,17 +476,6 @@ publication_add_relation(Oid pubid, PublicationRelInfo *pri,
 	return myself;
 }
 
-/* qsort comparator for attnums */
-static int
-compare_int16(const void *a, const void *b)
-{
-	int			av = *(const int16 *) a;
-	int			bv = *(const int16 *) b;
-
-	/* this can't overflow if int is wider than int16 */
-	return (av - bv);
-}
-
 /*
  * Translate a list of column names to an array of attribute numbers
  * and a Bitmapset with them; verify that each attribute is appropriate
