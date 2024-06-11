@@ -392,7 +392,7 @@ CreateStatistics(CreateStatsStmt *stmt)
 	 * it does not hurt (it does not matter for the contents, unlike for
 	 * indexes, for example).
 	 */
-	qsort(attnums, nattnums, sizeof(int16), compare_int16);
+	sort_int_16_arr(attnums, nattnums);
 
 	/*
 	 * Check for duplicates in the list of columns. The attnums are sorted so

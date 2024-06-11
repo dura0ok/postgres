@@ -540,7 +540,7 @@ publication_translate_columns(Relation targetrel, List *columns,
 	}
 
 	/* Be tidy, so that the catalog representation is always sorted */
-	qsort(attarray, n, sizeof(AttrNumber), compare_int16);
+	sort_int_16_arr(attarray, n);
 
 	*natts = n;
 	*attrs = attarray;
