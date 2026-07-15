@@ -37,6 +37,7 @@ invalid_entry_columns_order_test();
 inconsistent_with_parent_key__parent_key_corrupted_test();
 inconsistent_with_parent_key__child_key_corrupted_test();
 inconsistent_with_parent_key__parent_key_corrupted_posting_tree_test();
+equal_posting_tree_internal_keys_test();
 
 sub invalid_entry_order_leaf_page_test
 {
@@ -250,6 +251,35 @@ sub inconsistent_with_parent_key__parent_key_corrupted_posting_tree_test
 	my $expected =
 	  "index \"$indexname\": tid exceeds parent's high key in postingTree leaf on block 4";
 	like($stderr, qr/$expected/);
+}
+
+# Equal adjacent PostingItem keys on posting-tree root (block 2).
+sub equal_posting_tree_internal_keys_test
+{
+	my $indexname = "test_gin_idx";
+
+	$node->safe_psql(
+		'postgres', qq(
+		DROP TABLE IF EXISTS test;
+		CREATE TABLE test (a text[]);
+		INSERT INTO test (a) SELECT ('{aaaaa}') FROM generate_series(1, 30000);
+		CREATE INDEX $indexname ON test USING gin (a);
+	));
+	my $relpath = relation_filepath($indexname);
+
+	$node->stop;
+
+	# PostingItems start at offset 32; set first key equal to second.
+	my $find = qr/\A(.{32})(.{4})(.{6})(.{4})(.{6})/s;
+	my $replace = '$1$2$5$4$5';
+	string_replace_block($relpath, $find, $replace, 2);
+
+	$node->start;
+
+	my ($result, $stdout, $stderr) =
+	  $node->psql('postgres', qq(SELECT gin_index_check('$indexname')));
+	like($stderr,
+		qr/index "$indexname" has wrong tuple order in posting tree, block 2, offset 2/);
 }
 
 
